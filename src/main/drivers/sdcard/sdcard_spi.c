@@ -90,6 +90,10 @@ static void sdcardSpi_reset(void)
         return;
     }
 
+    if (sdcard.state >= SDCARD_STATE_READY) {
+        busSetSpeed(sdcard.dev, BUS_SPEED_INITIALIZATION);
+    }
+
     sdcard.failureCount++;
     if (sdcard.failureCount >= SDCARD_MAX_CONSECUTIVE_FAILURES) {
         sdcard.state = SDCARD_STATE_NOT_PRESENT;
@@ -470,8 +474,6 @@ static bool sdcardSpi_poll(void)
                     sdcard.state = SDCARD_STATE_NOT_PRESENT;
                 }
             }
-
-            busSetSpeed(sdcard.dev, BUS_SPEED_STANDARD);
         break;
 
         case SDCARD_STATE_CARD_INIT_IN_PROGRESS:
@@ -509,8 +511,6 @@ static bool sdcardSpi_poll(void)
                     }
                 }
             }
-
-            busSetSpeed(sdcard.dev, BUS_SPEED_STANDARD);
         break;
         case SDCARD_STATE_INITIALIZATION_RECEIVE_CID:
             if (sdcardSpi_receiveCID()) {
@@ -532,8 +532,6 @@ static bool sdcardSpi_poll(void)
                 sdcard.state = SDCARD_STATE_READY;
                 goto doMore;
             } // else keep waiting for the CID to arrive
-
-            busSetSpeed(sdcard.dev, BUS_SPEED_STANDARD);
         break;
         case SDCARD_STATE_SENDING_WRITE:
             // Have we finished sending the write yet?
@@ -853,18 +851,16 @@ void sdcardSpi_init(void)
     busSetSpeed(sdcard.dev, BUS_SPEED_INITIALIZATION);
 
     // SDCard wants 1ms minimum delay after power is applied to it
-    delay(1);
+    delay(1000);
 
     // Transmit at least 74 dummy clock cycles with CS high so the SD card can start up
-    IOHi(sdcard.dev->busdev.spi.csnPin);
-    SPI_TypeDef * instance = spiInstanceByDevice(sdcard.dev->busdev.spi.spiBus);
-    spiTransfer(instance, NULL, NULL, SDCARD_INIT_NUM_DUMMY_BYTES);
+    busDeselectDevice(sdcard.dev);
+    busTransfer(sdcard.dev, NULL, NULL, SDCARD_INIT_NUM_DUMMY_BYTES);
 
     // Wait for that transmission to finish before we enable the SDCard, so it receives the required number of cycles:
     int time = 100000;
     while (busIsBusy(sdcard.dev)) {
         if (time-- == 0) {
-            busSetSpeed(sdcard.dev, BUS_SPEED_STANDARD);
             busDeviceDeInit(sdcard.dev);
             sdcard.dev = NULL;
             sdcard.state = SDCARD_STATE_NOT_PRESENT;

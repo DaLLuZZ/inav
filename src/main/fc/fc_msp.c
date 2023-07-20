@@ -2526,7 +2526,6 @@ static mspResult_e mspFcProcessInCommand(uint16_t cmdMSP, sbuf_t *src)
             gpsSol.flags.validVelNE = false;
             gpsSol.flags.validVelD = false;
             gpsSol.flags.validEPE = false;
-            gpsSol.flags.validTime = false;
             gpsSol.numSat = sbufReadU8(src);
             gpsSol.llh.lat = sbufReadU32(src);
             gpsSol.llh.lon = sbufReadU32(src);
@@ -3484,9 +3483,7 @@ bool mspFCProcessInOutCommand(uint16_t cmdMSP, sbuf_t *dst, sbuf_t *src, mspResu
 				DISABLE_ARMING_FLAG(SIMULATOR_MODE_HITL);
 
 #ifdef USE_BARO
-            if ( requestedSensors[SENSOR_INDEX_BARO] != BARO_NONE ) {
 				baroStartCalibration();
-            }
 #endif
 #ifdef USE_MAG
 				DISABLE_STATE(COMPASS_CALIBRATED);
@@ -3497,15 +3494,10 @@ bool mspFCProcessInOutCommand(uint16_t cmdMSP, sbuf_t *dst, sbuf_t *src, mspResu
 
 				disarm(DISARM_SWITCH);  // Disarm to prevent motor output!!!
 			}   
-        } else {
+		} else if (!areSensorsCalibrating()) {
 			if (!ARMING_FLAG(SIMULATOR_MODE_HITL)) { // Just once
 #ifdef USE_BARO
-                if ( requestedSensors[SENSOR_INDEX_BARO] != BARO_NONE ) {
-                    sensorsSet(SENSOR_BARO);
-                    setTaskEnabled(TASK_BARO, true);
-                    DISABLE_ARMING_FLAG(ARMING_DISABLED_HARDWARE_FAILURE);
-				    baroStartCalibration();
-                }
+				baroStartCalibration();
 #endif			
 
 #ifdef USE_MAG
@@ -3534,7 +3526,6 @@ bool mspFCProcessInOutCommand(uint16_t cmdMSP, sbuf_t *dst, sbuf_t *src, mspResu
 						gpsSol.flags.validVelNE = true;
 						gpsSol.flags.validVelD = true;
 						gpsSol.flags.validEPE = true;
-						gpsSol.flags.validTime = false;
 
 						gpsSol.llh.lat = sbufReadU32(src);
 						gpsSol.llh.lon = sbufReadU32(src);
@@ -3589,7 +3580,7 @@ bool mspFCProcessInOutCommand(uint16_t cmdMSP, sbuf_t *dst, sbuf_t *src, mspResu
 
 				if (sensors(SENSOR_MAG)) {
 					mag.magADC[X] = ((int16_t)sbufReadU16(src)) / 20;  // 16000 / 20 = 800uT
-					mag.magADC[Y] = ((int16_t)sbufReadU16(src)) / 20;   //note that mag failure is simulated by setting all readings to zero
+					mag.magADC[Y] = ((int16_t)sbufReadU16(src)) / 20;
 					mag.magADC[Z] = ((int16_t)sbufReadU16(src)) / 20;
 				} else {
 					sbufAdvance(src, sizeof(uint16_t) * XYZ_AXIS_COUNT);
@@ -3606,16 +3597,8 @@ bool mspFCProcessInOutCommand(uint16_t cmdMSP, sbuf_t *dst, sbuf_t *src, mspResu
 #endif
 
                 if (SIMULATOR_HAS_OPTION(HITL_AIRSPEED)) {
-                    simulatorData.airSpeed = sbufReadU16(src);
-			    } else {
-                    if (SIMULATOR_HAS_OPTION(HITL_EXTENDED_FLAGS)) {
-                        sbufReadU16(src); 
-                    }
-                }
-
-                if (SIMULATOR_HAS_OPTION(HITL_EXTENDED_FLAGS)) {
-                    simulatorData.flags |= ((uint16_t)sbufReadU8(src)) << 8;
-                }
+                    simulatorData.airSpeed = sbufReadU16(src);   
+			    }
 			} else {
 				DISABLE_STATE(GPS_FIX);
 			}
