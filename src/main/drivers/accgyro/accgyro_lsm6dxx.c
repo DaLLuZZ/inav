@@ -95,9 +95,13 @@ static void lsm6dxxConfig(gyroDev_t *gyro)
     // Reset the device (wait 100ms before continuing config)
     lsm6dxxWriteRegisterBits(dev, LSM6DXX_REG_CTRL3_C, LSM6DXX_MASK_CTRL3_C_RESET, BIT(0), 100);
 
-    // Configure data ready pulsed mode
-    lsm6dxxWriteRegisterBits(dev, LSM6DXX_REG_COUNTER_BDR1, LSM6DXX_MASK_COUNTER_BDR1, LSM6DXX_VAL_COUNTER_BDR1_DDRY_PM, 0);
- 
+    // incompatible register at address 0x0B
+    if (lsm6dID != LSM6DS3_CHIP_ID)
+    {
+        // Configure data ready pulsed mode
+        lsm6dxxWriteRegisterBits(dev, LSM6DXX_REG_COUNTER_BDR1, LSM6DXX_MASK_COUNTER_BDR1, LSM6DXX_VAL_COUNTER_BDR1_DDRY_PM, 0);
+    }
+
     // Configure interrupt pin 1 for gyro data ready only
     lsm6dxxWriteRegister(dev, LSM6DXX_REG_INT1_CTRL, LSM6DXX_VAL_INT1_CTRL, 1);
 
@@ -106,11 +110,26 @@ static void lsm6dxxConfig(gyroDev_t *gyro)
 
     // Configure the accelerometer
     // 833hz ODR, 16G scale, use LPF2 output (default with ODR/4 cutoff)
-    lsm6dxxWriteRegister(dev, LSM6DXX_REG_CTRL1_XL, (LSM6DXX_VAL_CTRL1_XL_ODR833 << 4) | (LSM6DXX_VAL_CTRL1_XL_16G << 2) | (LSM6DXX_VAL_CTRL1_XL_LPF2 << 1), 1);
+    // incompatible register at address 0x10
+    if (lsm6dID != LSM6DS3_CHIP_ID)
+    {
+        lsm6dxxWriteRegister(dev, LSM6DXX_REG_CTRL1_XL, (LSM6DXX_VAL_CTRL1_XL_ODR833 << 4) | (LSM6DXX_VAL_CTRL1_XL_16G << 2) | (LSM6DXX_VAL_CTRL1_XL_LPF2 << 1), 1);
+    }
+    else
+    {
+        lsm6dxxWriteRegister(dev, LSM6DXX_REG_CTRL1_XL, (LSM6DXX_VAL_CTRL1_XL_ODR833 << 4) | (LSM6DXX_VAL_CTRL1_XL_16G << 2), 1);
+    }
 
     // Configure the gyro
     // 6664hz ODR, 2000dps scale
-    lsm6dxxWriteRegister(dev, LSM6DXX_REG_CTRL2_G, (LSM6DXX_VAL_CTRL2_G_ODR6664 << 4) | (LSM6DXX_VAL_CTRL2_G_2000DPS << 2), 1);
+    if (lsm6dID != LSM6DS3_CHIP_ID)
+    {
+        lsm6dxxWriteRegister(dev, LSM6DXX_REG_CTRL2_G, (LSM6DXX_VAL_CTRL2_G_ODR6664 << 4) | (LSM6DXX_VAL_CTRL2_G_2000DPS << 2), 1);
+    }
+    else // 1660hz ODR, 2000dps scale
+    {
+        lsm6dxxWriteRegister(dev, LSM6DXX_REG_CTRL2_G, (0x08 << 4) | (LSM6DXX_VAL_CTRL2_G_2000DPS << 2), 1);
+    }
 
     // Configure control register 3
     // latch LSB/MSB during reads; set interrupt pins active high; set interrupt pins push/pull; set 4-wire SPI; enable auto-increment burst reads
@@ -118,13 +137,25 @@ static void lsm6dxxConfig(gyroDev_t *gyro)
 
     // Configure control register 4
     // enable accelerometer high performane mode; enable gyro LPF1
-    lsm6dxxWriteRegisterBits(dev, LSM6DXX_REG_CTRL4_C, LSM6DXX_MASK_CTRL4_C, (LSM6DXX_VAL_CTRL4_C_DRDY_MASK | LSM6DXX_VAL_CTRL4_C_I2C_DISABLE | LSM6DXX_VAL_CTRL4_C_LPF1_SEL_G), 1);
-
- 
+    if (lsm6dID != LSM6DS3_CHIP_ID)
+    {
+        lsm6dxxWriteRegisterBits(dev, LSM6DXX_REG_CTRL4_C, LSM6DXX_MASK_CTRL4_C, (LSM6DXX_VAL_CTRL4_C_DRDY_MASK | LSM6DXX_VAL_CTRL4_C_I2C_DISABLE | LSM6DXX_VAL_CTRL4_C_LPF1_SEL_G), 1);
+    }
+    else
+    {
+        lsm6dxxWriteRegisterBits(dev, LSM6DXX_REG_CTRL4_C, 0x0C, (LSM6DXX_VAL_CTRL4_C_DRDY_MASK | LSM6DXX_VAL_CTRL4_C_I2C_DISABLE), 1);
+    }
 
     // Configure control register 6
     // disable I2C interface; set gyro LPF1 cutoff according to gyro_hardware_lpf setting
-    lsm6dxxWriteRegisterBits(dev, LSM6DXX_REG_CTRL6_C, (lsm6dID == LSM6DSO_CHIP_ID? LSM6DXX_MASK_CTRL6_C:LSM6DSL_MASK_CTRL6_C), (LSM6DXX_VAL_CTRL6_C_XL_HM_MODE | getLsmDlpfBandwidth(gyro)), 1);
+    if (lsm6dID != LSM6DS3_CHIP_ID)
+    {
+        lsm6dxxWriteRegisterBits(dev, LSM6DXX_REG_CTRL6_C, (lsm6dID == LSM6DSO_CHIP_ID? LSM6DXX_MASK_CTRL6_C:LSM6DSL_MASK_CTRL6_C), (LSM6DXX_VAL_CTRL6_C_XL_HM_MODE | getLsmDlpfBandwidth(gyro)), 1);
+    }
+    else
+    {
+        lsm6dxxWriteRegisterBits(dev, LSM6DXX_REG_CTRL6_C, 0x10, LSM6DXX_VAL_CTRL6_C_XL_HM_MODE, 1);
+    }
 
     // Configure control register 7
     lsm6dxxWriteRegisterBits(dev, LSM6DXX_REG_CTRL7_G, LSM6DXX_MASK_CTRL7_G, (LSM6DXX_VAL_CTRL7_G_HP_EN_G | LSM6DXX_VAL_CTRL7_G_HPM_G_16), 1);
@@ -150,10 +181,10 @@ static bool lsm6dxxDetect(busDevice_t * dev)
         delay(150);
 
         busRead(dev, LSM6DXX_REG_WHO_AM_I, &tmp);
-
         switch (tmp) {
             case LSM6DSO_CHIP_ID:
-            case LSM6DSL_CHIP_ID: 
+            case LSM6DSL_CHIP_ID:
+            case LSM6DS3_CHIP_ID:
                  lsm6dID = tmp;
                 // Compatible chip detected
                 return true;
@@ -206,6 +237,7 @@ static bool lsm6dxxGyroRead(gyroDev_t *gyro)
 // Init Gyro first,then Acc
 bool lsm6dGyroDetect(gyroDev_t *gyro)
 {
+
     gyro->busDev = busDeviceInit(BUSTYPE_SPI, DEVHW_LSM6D, gyro->imuSensorToUse, OWNER_MPU);
     if (gyro->busDev == NULL) {
         return false;

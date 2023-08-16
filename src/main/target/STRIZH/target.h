@@ -31,18 +31,22 @@
 #define SENSORS_SET (SENSOR_ACC|SENSOR_GYRO)
 
 // *************** Gyro & ACC **********************
-/*#define USE_SPI
+#define USE_SPI
 
 #define USE_SPI_DEVICE_1
 #define SPI1_SCK_PIN            PA5
 #define SPI1_MISO_PIN           PA6
 #define SPI1_MOSI_PIN           PA7
 
-#define USE_IMU_BMI160
-#define IMU_BMI160_ALIGN        CW0_DEG
-#define BMI160_SPI_BUS          BUS_SPI1
-#define BMI160_CS_PIN			PA4
-*/
+//#define USE_IMU_BMI160
+//#define IMU_BMI160_ALIGN        CW0_DEG
+//#define BMI160_SPI_BUS          BUS_SPI1
+//#define BMI160_CS_PIN			PA4
+#define USE_IMU_LSM6DXX
+#define IMU_LSM6DXX_ALIGN        CW0_DEG
+#define LSM6DXX_CS_PIN           PA4
+#define LSM6DXX_SPI_BUS          BUS_SPI1
+
 // *************** Mag *****************************
 /*
 #define USE_I2C
@@ -65,7 +69,7 @@
 #define USE_UART1
 #define UART1_RX_PIN            PB7
 #define UART1_TX_PIN            PB6
-/*
+
 #define USE_UART2
 #define UART2_RX_PIN            PA3
 #define UART2_TX_PIN            PA2
@@ -81,12 +85,12 @@
 #define USE_UART5
 #define UART5_RX_PIN            PD2
 #define UART5_TX_PIN            PC12
-
+/*
 #define USE_SOFTSERIAL1
 #define SOFTSERIAL_1_RX_PIN      PB1
 #define SOFTSERIAL_1_TX_PIN      PB0
 */
-#define SERIAL_PORT_COUNT       1
+#define SERIAL_PORT_COUNT       5
 /*
 #define DEFAULT_RX_TYPE         RX_TYPE_SERIAL
 #define SERIALRX_PROVIDER       SERIALRX_SBUS
